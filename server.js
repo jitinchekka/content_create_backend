@@ -1,80 +1,144 @@
 const express = require("express");
-const mongoose = require("mongoose");
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
 const app = express();
 
+const uri= "mongodb+srv://jitinchekka2:tsdG1S4YqB2tbQEq@cluster0.cdnvlxs.mongodb.net/?retryWrites=true&w=majority";
 // Configure middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors());
 
 // Connect to MongoDB
-mongoose
-  .connect("mongodb://localhost/social-media-posts", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log(err));
-
-// Define the Post model schema
-const PostSchema = new mongoose.Schema({
-  text: String,
-  tags: [String],
-});
-
-// Create the Post model
-const Post = mongoose.model("Post", PostSchema);
-
-// Define the routes
-app.get("/posts", (req, res) => {
-  Post.find()
-    .then((posts) => res.json(posts))
-    .catch((err) => res.status(400).json("Error: " + err));
-});
-
-app.post("/posts", (req, res) => {
-  const newPost = new Post({
-    text: req.body.text,
-    tags: req.body.tags,
-  });
-
-  newPost
-    .save()
-    .then(() => res.json("Post added!"))
-    .catch((err) => res.status(400).json("Error: " + err));
-});
-
-app.delete("/posts/:id", (req, res) => {
-  Post.findByIdAndDelete(req.params.id)
-    .then(() => res.json("Post deleted."))
-    .catch((err) => res.status(400).json("Error: " + err));
-});
-
-// Endpoint to get the count of each tag
-app.get("/tags", async (req, res) => {
-  try {
-    const tagCount = await Post.aggregate([
-      {
-        $unwind: "$tags", // split the tags array into multiple documents
-      },
-      {
-        $group: {
-          // group the documents by tag and count the occurrences of each tag
-          _id: "$tags",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-    res.send(tagCount);
-  } catch (error) {
-    res.status(500).send(error);
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
   }
 });
 
+// async function run() {
+//   try {
+//     // Connect the client to the server	(optional starting in v4.7)
+//     await client.connect();
+//     // Send a ping to confirm a successful connection
+//     await client.db("admin").command({ ping: 1 });
+//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+//   } finally {
+//     // Ensures that the client will close when you finish/error
+//     await client.close();
+//   } 
+// }
+// run().catch(console.dir);
+const mongoose = require('mongoose');
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+// If connection is successful
+mongoose.connection.on('connected', () => {
+  console.log('Connected to database mongodb @ 27017');
+});
+// If connection is not successful, then print the error
+mongoose.connection.on('error', (err) => {
+  if (err) {
+    console.log('Error in database connection: ' + err);
+  }
+});
+
+// Define a schema for your data
+const mySchema = new mongoose.Schema({
+  id: {
+    type: String,
+    unique: true // Ensure the id field is unique
+  },
+  remaining: {
+    type: Number,
+    default: 5 // Set a default value for the remaining field
+  }
+});
+
+// Create a model based on your schema
+const MyModel = mongoose.model('MyModel', mySchema);
+
+// CRUD operations
+
+// Create a new document
+app.post('/my-collection', (req, res) => {
+  const newDoc = new MyModel({
+    id: req.body.id,
+    remaining: req.body.remaining
+  });
+
+  newDoc.save()
+  .then((doc) => {
+    res.status(201).json(doc);
+  })
+  .catch((err) => {
+    res.status(500).json({ error: err.message });
+  });
+});
+
+// Retrieve all documents
+app.get('/my-collection', (req, res) => {
+  MyModel.find()
+  .then((docs) => {
+    res.status(200).json(docs);
+  })
+  .catch((err) => {
+    res.status(500).json({ error: err.message });
+  });
+});
+
+// Retrieve a single document by ID
+app.get('/my-collection/:id', (req, res) => {
+  MyModel.findOne({ id: req.params.id })
+  .then((doc) => {
+    if (!doc) {
+      res.status(404).json({ error: 'Document not found' });
+    } else {
+      res.status(200).json(doc);
+    }
+  })
+  .catch((err) => {
+    res.status(500).json({ error: err.message });
+  });
+});
+
+// Update a document by ID
+app.patch('/my-collection/:id', (req, res) => {
+  MyModel.findOneAndUpdate({ id: req.params.id }, req.body, { new: true }) // { new: true } returns the updated document
+  .then((doc) => {
+    if (!doc) {
+      res.status(404).json({ error: 'Document not found' });
+    } else {
+      res.status(200).json(doc);
+    }
+  })
+  .catch((err) => {
+    res.status(500).json({ error: err.message });
+  });
+});
+
+// Delete a document by ID
+app.delete('/my-collection/:id', (req, res) => {
+  MyModel.findOneAndDelete({ id: req.params.id })
+  .then((doc) => {
+    if (!doc) {
+      res.status(404).json({ error: 'Document not found' });
+    } else {
+      res.status(204).json();
+    }
+  })
+  .catch((err) => {
+    res.status(500).json({ error: err.message });
+  });
+});
+
 // Start the server
-app.listen(5000, () => {
-  console.log("Server started on port 5000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
