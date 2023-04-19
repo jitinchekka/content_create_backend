@@ -1,3 +1,8 @@
+// POST /my-collection - Create a new document
+// GET /my-collection - Retrieve all documents
+// GET /my-collection/:id - Retrieve a single document by ID
+// PATCH /my-collection/:id - Update a document by ID
+// DELETE /my-collection/:id - Delete a document by ID
 const express = require("express");
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const bodyParser = require("body-parser");
@@ -56,8 +61,22 @@ const mySchema = new mongoose.Schema({
   },
   remaining: {
     type: Number,
-    default: 5 // Set a default value for the remaining field
-  }
+    default: 10 // Set a default value for the remaining field
+  },
+  prompts: [
+    {
+      tags: [String],
+      heading: {
+        type: String,
+        required: true
+      },
+      bodyText: {
+        type: String,
+        required: true
+      }
+    }
+  ]
+  
 });
 
 // Create a model based on your schema
@@ -136,6 +155,75 @@ app.delete('/my-collection/:id', (req, res) => {
     res.status(500).json({ error: err.message });
   });
 });
+//  handling prompts
+app.post('/prompts', async (req, res) => {
+  const { id, tags, heading, bodyText } = req.body;
+  try {
+    const result = await mySchema.findOneAndUpdate(
+      { id },
+      { $push: { prompts: { tags, heading, bodyText } } },
+      { new: true }
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+app.put('/prompts/:id', async (req, res) => {
+  const { id } = req.params;
+  const { tags, heading, bodyText } = req.body;
+  try {
+    const result = await mySchema.findOneAndUpdate(
+      { id, 'prompts._id': req.body._id },
+      {
+        $set: {
+          'prompts.$.tags': tags,
+          'prompts.$.heading': heading,
+          'prompts.$.bodyText': bodyText,
+        },
+      },
+      { new: true }
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+app.put('/prompts/:id', async (req, res) => {
+  const { id } = req.params;
+  const { tags, heading, bodyText } = req.body;
+  try {
+    const result = await mySchema.findOneAndUpdate(
+      { id, 'prompts._id': req.body._id },
+      {
+        $set: {
+          'prompts.$.tags': tags,
+          'prompts.$.heading': heading,
+          'prompts.$.bodyText': bodyText,
+        },
+      },
+      { new: true }
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+app.delete('/prompts/:id', async (req, res) => {
+  const { id } = req.params;
+  const { promptId } = req.body;
+  try {
+    const result = await mySchema.findOneAndUpdate(
+      { id },
+      { $pull: { prompts: { _id: promptId } } },
+      { new: true }
+    );
+    res.json(result);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+
 
 // Start the server
 const PORT = process.env.PORT || 3000;
