@@ -73,6 +73,11 @@ const mySchema = new mongoose.Schema({
       bodyText: {
         type: String,
         required: true
+      },
+      // add industry field
+      industry: {
+        type: String,
+        required: true
       }
     }
   ]
@@ -88,7 +93,9 @@ const MyModel = mongoose.model('MyModel', mySchema);
 app.post('/my-collection', (req, res) => {
   const newDoc = new MyModel({
     id: req.body.id,
-    remaining: req.body.remaining
+    remaining: req.body.remaining,
+    // prompts to null
+    prompts: null
   });
 
   newDoc.save()
@@ -155,65 +162,55 @@ app.delete('/my-collection/:id', (req, res) => {
     res.status(500).json({ error: err.message });
   });
 });
-//  handling prompts
+
+
+// //  handling prompts
 app.post('/prompts', async (req, res) => {
   const { id, tags, heading, bodyText } = req.body;
   try {
-    const result = await mySchema.findOneAndUpdate(
+    const result = await MyModel.findOneAndUpdate(
+      { id }, // Find a document with that id
+      { $push: { prompts: { tags, heading, bodyText } } }, // $push is a MongoDB operator that appends to an array
+      { new: true }
+    );
+    console.log("result", result)
+    res.json(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
+});
+//Example of a request body
+// {
+//   "id": "123",
+//   "tags": ["tag1", "tag2"],
+//   "heading": "Heading",
+//   "bodyText": "Body text"
+// }
+app.put('/prompts/:id', async (req, res) => {
+  const { id } = req.params;
+  const { tags, heading, bodyText, industry } = req.body;
+
+  try {
+    const prompt = { tags, heading, bodyText, industry };
+    const result = await MyModel.findOneAndUpdate(
       { id },
-      { $push: { prompts: { tags, heading, bodyText } } },
+      { $push: { prompts: prompt } },
       { new: true }
     );
     res.json(result);
   } catch (error) {
     res.status(500).send(error);
+    console.log(error);
   }
 });
-app.put('/prompts/:id', async (req, res) => {
-  const { id } = req.params;
-  const { tags, heading, bodyText } = req.body;
-  try {
-    const result = await mySchema.findOneAndUpdate(
-      { id, 'prompts._id': req.body._id },
-      {
-        $set: {
-          'prompts.$.tags': tags,
-          'prompts.$.heading': heading,
-          'prompts.$.bodyText': bodyText,
-        },
-      },
-      { new: true }
-    );
-    res.json(result);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-app.put('/prompts/:id', async (req, res) => {
-  const { id } = req.params;
-  const { tags, heading, bodyText } = req.body;
-  try {
-    const result = await mySchema.findOneAndUpdate(
-      { id, 'prompts._id': req.body._id },
-      {
-        $set: {
-          'prompts.$.tags': tags,
-          'prompts.$.heading': heading,
-          'prompts.$.bodyText': bodyText,
-        },
-      },
-      { new: true }
-    );
-    res.json(result);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
+
+
 app.delete('/prompts/:id', async (req, res) => {
   const { id } = req.params;
   const { promptId } = req.body;
   try {
-    const result = await mySchema.findOneAndUpdate(
+    const result = await MyModel.findOneAndUpdate(
       { id },
       { $pull: { prompts: { _id: promptId } } },
       { new: true }
@@ -224,6 +221,36 @@ app.delete('/prompts/:id', async (req, res) => {
   }
 });
 
+// Get prompts by id
+app.get('/prompts/:id', async (req, res) => {
+  console.log("req.params",req.params);
+  const { id } = req.params;
+  try {
+    // get all prompts for a given id
+    const promts = await MyModel.findOne({ id }, { prompts: 1, _id: 0 }); // { prompts: 1, _id: 0 } is a MongoDB projection that returns only the prompts field and excludes the _id field
+    res.json(promts);
+    console.log("prompts",promts);
+  } catch (error) {
+    // handle error
+    res.send(error);
+  }
+});
+// request format http://localhost:3000/prompts/123?tags=tag1,tag2
+ 
+// get the most used industry from the prompts
+app.get('/prompts/industry', async (req, res) => {
+  try {
+    const result = await MyModel.aggregate([
+      { $unwind: '$prompts' },
+      { $group: { _id: '$prompts.industry', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+    ]);
+    res.json(result);
+  } catch (error) {
+    res.send(error);
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
