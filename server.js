@@ -87,6 +87,11 @@ const mySchema = new mongoose.Schema({
 // Create a model based on your schema
 const MyModel = mongoose.model('MyModel', mySchema);
 
+// Home route
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
+
 // CRUD operations
 
 // Create a new document
