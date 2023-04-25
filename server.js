@@ -89,7 +89,16 @@ const MyModel = mongoose.model('MyModel', mySchema);
 
 // Home route
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  // If connection is successful
+  mongoose.connection.on('connected', () => {
+    res.send('Welcome to the home page!');
+  });
+  // If connection is not successful, then print the error
+  mongoose.connection.on('error', (err) => {
+    if (err) {
+      res.send('Error in database connection: ' + err);
+    }
+  });
 });
 
 // CRUD operations
