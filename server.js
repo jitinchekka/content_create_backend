@@ -26,31 +26,32 @@ const client = new MongoClient(uri, {
   }
 });
 
-
+// async function run() {
+//   try {
+//     // Connect the client to the server	(optional starting in v4.7)
+//     await client.connect();
+//     // Send a ping to confirm a successful connection
+//     await client.db("admin").command({ ping: 1 });
+//     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+//   } finally {
+//     // Ensures that the client will close when you finish/error
+//     await client.close();
+//   } 
+// }
+// run().catch(console.dir);
 const mongoose = require('mongoose');
-// mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-// // If connection is successful
-// mongoose.connection.on('connected', () => {
-//   console.log('Connected to database mongodb @ 27017');
-// });
-// // If connection is not successful, then print the error
-// mongoose.connection.on('error', (err) => {
-//   if (err) {
-//     console.log('Error in database connection: ' + err);
-//   }
-// });
-
-async function connectToDatabase() {
-  try {
-    await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    console.log('Connected to the MongoDB database');
-  } catch (err) {
-    console.error('Error connecting to the MongoDB database:', err);
+// If connection is successful
+mongoose.connection.on('connected', () => {
+  console.log('Connected to database mongodb @ 27017');
+});
+// If connection is not successful, then print the error
+mongoose.connection.on('error', (err) => {
+  if (err) {
+    console.log('Error in database connection: ' + err);
   }
-}
-
-connectToDatabase();
+});
 
 // Define a schema for your data
 const mySchema = new mongoose.Schema({
@@ -75,10 +76,6 @@ const mySchema = new mongoose.Schema({
       },
       // add industry field
       industry: {
-        type: String,
-        required: true
-      },
-      type_of_post: {
         type: String,
         required: true
       }
@@ -181,8 +178,7 @@ app.delete('/my-collection/:id', (req, res) => {
 });
 
 
-//  handling prompts
-// req.body = { id: '123', tags: ['tag1', 'tag2'], heading: 'Heading', bodyText: 'Body text' }
+// //  handling prompts
 app.post('/prompts', async (req, res) => {
   const { id, tags, heading, bodyText } = req.body;
   try {
@@ -269,23 +265,6 @@ app.get('/prompts/industry', async (req, res) => {
     res.send(error);
   }
 });
-
-// get the most used tags from the prompts
-app.get('/prompts/tags', async (req, res) => {
-  try {
-    const result = await MyModel.aggregate([
-      { $unwind: '$prompts' },
-      { $unwind: '$prompts.tags' },
-      { $group: { _id: '$prompts.tags', count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
-    res.json(result);
-  } catch (error) {
-    res.status(500).send(error);
-  }
-});
-
 
 // Start the server
 const PORT = process.env.PORT || 3000;
