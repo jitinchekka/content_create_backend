@@ -69,16 +69,16 @@ const mySchema = new mongoose.Schema({
         type: String,
         required: true
       },
-      bodyText: {
-        type: String,
-        required: true
-      },
       // add industry field
       industry: {
         type: String,
         required: true
       },
       type_of_post: {
+        type: String,
+        required: true
+      },
+      bodyText: {
         type: String,
         required: true
       }
@@ -182,13 +182,13 @@ app.delete('/my-collection/:id', (req, res) => {
 
 
 //  handling prompts
-// req.body = { id: '123', tags: ['tag1', 'tag2'], heading: 'Heading', bodyText: 'Body text' }
+// req.body = { id: 'jitin@gmail.com', tags: ['tag1', 'tag2'], heading: 'Heading', industry:"education", bodyText: 'Body text' }
 app.post('/prompts', async (req, res) => {
-  const { id, tags, heading, bodyText } = req.body;
+  const { id, tags, heading, industry, type_of_post,bodyText } = req.body;
   try {
     const result = await MyModel.findOneAndUpdate(
       { id }, // Find a document with that id
-      { $push: { prompts: { tags, heading, bodyText } } }, // $push is a MongoDB operator that appends to an array
+      { $push: { prompts: { tags, heading, industry,type_of_post, bodyText } } }, // Append data to prompts array
       { new: true }
     );
     console.log("result", result)
@@ -241,7 +241,7 @@ app.delete('/prompts/:id', async (req, res) => {
 
 // Get prompts by id
 app.get('/prompts/:id', async (req, res) => {
-  console.log("req.params",req.params);
+  console.log("Get prompts by id")
   const { id } = req.params;
   try {
     // get all prompts for a given id
@@ -255,14 +255,14 @@ app.get('/prompts/:id', async (req, res) => {
 });
 // request format http://localhost:3000/prompts/123?tags=tag1,tag2
  
-// get the most used industry from the prompts
-app.get('/prompts/industry', async (req, res) => {
+// get the most used 10 industries from the prompts
+app.get('/industry', async (req, res) => {
   try {
     const result = await MyModel.aggregate([
       { $unwind: '$prompts' },
       { $group: { _id: '$prompts.industry', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 1 },
+      { $limit: 10 },
     ]);
     res.json(result);
   } catch (error) {
@@ -270,8 +270,8 @@ app.get('/prompts/industry', async (req, res) => {
   }
 });
 
-// get the most used tags from the prompts
-app.get('/prompts/tags', async (req, res) => {
+// get the 10 most used tags from the prompts
+app.get('/tags', async (req, res) => {
   try {
     const result = await MyModel.aggregate([
       { $unwind: '$prompts' },
@@ -280,8 +280,10 @@ app.get('/prompts/tags', async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 10 },
     ]);
+    console.log("result",result);
     res.json(result);
   } catch (error) {
+    console.log("error",error);
     res.status(500).send(error);
   }
 });
