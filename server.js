@@ -288,6 +288,21 @@ app.get('/tags', async (req, res) => {
   }
 });
 
+// get the 10 most used type_of_post from the prompts
+app.get('/type_of_post', async (req, res) => {
+  try {
+    const result = await MyModel.aggregate([
+      { $unwind: '$prompts' },
+      { $group: { _id: '$prompts.type_of_post', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+    res.json(result);
+  } catch (error) {
+    console.log("error", error);
+    res.send(error);
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 3000;
